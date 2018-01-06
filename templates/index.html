@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>Video Test</title>
+
+    <!-- Bootstrap -->
+    <link href="static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <h1>Video Streaming Demonstration</h1>
+    <div style="text-align:center;">
+        <img id="imgFrameShow" src="">
+    </div>
+    <form class="form-horizontal">
+        <div class="form-group">
+            <label for="" class="col-sm-2 control-label">X:</label>
+            <div class="col-sm-10">
+                <input type="number" class="form-control" id="inputX" placeholder="{{point_position_x}}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="" class="col-sm-2 control-label">Y:</label>
+            <div class="col-sm-10">
+                <input type="number" class="form-control" id="inputY" placeholder="{{point_position_y}}">
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button type="button" class="btn btn-default" id="btnDrawCircle">Draw</button>
+            </div>
+        </div>
+    </form>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="static/js/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="static/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+        var ws = null;
+
+        $(document).ready(function () {
+            bind_events();
+            init_ws();
+        });
+
+        function init_ws() {
+            console.log("init_ws ...")
+            if ("WebSocket" in window) {
+                ws = new WebSocket("ws://" + document.domain + ":5001/ws");
+                ws.binaryType = "arraybuffer";
+                ws.onopen = function () {
+                    ws.send("I'm client");
+                };
+                ws.onmessage = function (evt) {
+                    console.log("ws message in -> ", evt.data)
+                    var bytes = new Uint8Array(evt.data);
+                    var data = "";
+                    var len = bytes.byteLength;
+                    for (var i = 0; i < len; ++i) {
+                        data += String.fromCharCode(bytes[i]);
+                    }
+                    var img = document.getElementById("imgFrameShow");
+                    img.src = "data:image/png;base64," + window.btoa(data);
+                };
+                ws.onclose = function () {
+                    alert("ws Closed");
+                };
+                ws.onerror = function (err) {
+                    alert("ws Error: " + err);
+                };
+            } else {
+                alert("WebSocket not supported");
+            }
+            window.onbeforeunload = function () {
+                ws.onclose = function () {
+                    console.log('unlodad')
+                };
+                ws.close()
+            };
+        }
+
+        function bind_events() {
+            $("#btnDrawCircle").click(function () {
+                var x = $("#inputX").val();
+                var y = $("#inputY").val();
+                console.log("draw ...(%s,%s)", x, y);
+                $.get("/set_point_position/" + x + "/" + y, function (data, status) {
+                    console.log("set_point_position status:", status)
+                    console.log("set_point_position data:", data)
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>
