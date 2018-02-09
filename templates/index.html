@@ -16,37 +16,139 @@
     <h1>Video Streaming Demonstration</h1>
     <div style="text-align:center;">
         <img id="imgFrameShow" src="">
+        <div id="video_size">
+        </div>
     </div>
-    <form class="form-horizontal">
+    <form class="form-inline">
         <div class="form-group">
-            <label for="" class="col-sm-2 control-label">X:</label>
-            <div class="col-sm-10">
-                <input type="number" class="form-control" id="inputX" placeholder="{{point_position_x}}">
+            <div class="col-sm-offset-2 col-sm-10">
+                <div>Start</div>
             </div>
         </div>
         <div class="form-group">
-            <label for="" class="col-sm-2 control-label">Y:</label>
-            <div class="col-sm-10">
-                <input type="number" class="form-control" id="inputY" placeholder="{{point_position_y}}">
+            <label for="" class="col-sm-1 control-label">X:</label>
+            <div class="col-sm-2">
+                <input type="number" class="form-control" id="lineStartX" placeholder="0">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="" class="col-sm-1 control-label">Y:</label>
+            <div class="col-sm-2">
+                <input type="number" class="form-control" id="lineStartY" placeholder="0">
             </div>
         </div>
         <div class="form-group">
             <div class="col-sm-offset-2 col-sm-10">
-                <button type="button" class="btn btn-default" id="btnDrawCircle">Draw</button>
+                <div>End</div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="" class="col-sm-1 control-label">X:</label>
+            <div class="col-sm-2">
+                <input type="number" class="form-control" id="lineEndX" placeholder="0">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="" class="col-sm-1 control-label">Y:</label>
+            <div class="col-sm-2">
+                <input type="number" class="form-control" id="lineEndY" placeholder="0">
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button type="button" class="btn btn-default" id="btnDrawLine">Draw Line</button>
             </div>
         </div>
     </form>
+    <form class="form-inline">
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <div>Start</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="" class="col-sm-1 control-label">X:</label>
+                <div class="col-sm-2">
+                    <input type="number" class="form-control" id="rectStartX" placeholder="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="" class="col-sm-1 control-label">Y:</label>
+                <div class="col-sm-2">
+                    <input type="number" class="form-control" id="rectStartY" placeholder="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <div>End</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="" class="col-sm-1 control-label">X:</label>
+                <div class="col-sm-2">
+                    <input type="number" class="form-control" id="rectEndX" placeholder="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="" class="col-sm-1 control-label">Y:</label>
+                <div class="col-sm-2">
+                    <input type="number" class="form-control" id="rectEndY" placeholder="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <button type="button" class="btn btn-default" id="btnDrawRect">Draw Rectangle</button>
+                </div>
+            </div>
+        </form>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="static/js/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="static/bootstrap/js/bootstrap.min.js"></script>
     <script type="text/javascript">
         var ws = null;
+        var frame_count = 0;
 
         $(document).ready(function () {
             bind_events();
+            load_basic_info();
+            load_line_info();
             init_ws();
         });
+
+        function load_line_info() {
+            $.get("/line", function (data, status) {
+                console.log("line -> status: ", status, " data: ", data)
+                if (data === null) {
+                    console.log("no line currently!")
+                } else {
+                    $("#lineStartX").val(data.start.x);
+                    $("#lineStartY").val(data.start.y);
+                    $("#lineEndX").val(data.end.x);
+                    $("#lineEndY").val(data.end.x);
+                }
+            });
+            $.get("/rect", function (data, status) {
+                console.log("rect -> status: ", status, " data: ", data)
+                if (data === null) {
+                    console.log("no rect currently!")
+                } else {
+                    $("#rectStartX").val(data.start.x);
+                    $("#rectStartY").val(data.start.y);
+                    $("#rectEndX").val(data.end.x);
+                    $("#rectEndY").val(data.end.x);
+                }
+            });
+        }
+
+        function load_basic_info() {
+            $.get("/video_info", function (data, status) {
+                console.log("video_info -> status: ", status, " data: ", data)
+                var video_size = data.video_size;
+                var txt = 'width: ' + video_size[0] + ', height = ' + video_size[1]
+                $("#video_size").text(txt)
+            });
+        }
 
         function init_ws() {
             console.log("init_ws ...")
@@ -57,7 +159,8 @@
                     ws.send("I'm client");
                 };
                 ws.onmessage = function (evt) {
-                    console.log("ws message in -> ", evt.data)
+                    frame_count++;
+                    console.debug("ws message in -> ", frame_count)
                     var bytes = new Uint8Array(evt.data);
                     var data = "";
                     var len = bytes.byteLength;
@@ -68,7 +171,7 @@
                     img.src = "data:image/png;base64," + window.btoa(data);
                 };
                 ws.onclose = function () {
-                    alert("ws Closed");
+                    console.log("ws Closed");
                 };
                 ws.onerror = function (err) {
                     alert("ws Error: " + err);
@@ -85,13 +188,48 @@
         }
 
         function bind_events() {
-            $("#btnDrawCircle").click(function () {
-                var x = $("#inputX").val();
-                var y = $("#inputY").val();
-                console.log("draw ...(%s,%s)", x, y);
-                $.get("/set_point_position/" + x + "/" + y, function (data, status) {
-                    console.log("set_point_position status:", status)
-                    console.log("set_point_position data:", data)
+            $("#btnDrawLine").click(function () {
+                var x_start = $("#lineStartX").val();
+                var y_start = $("#lineStartY").val();
+                var x_end = $("#lineEndX").val();
+                var y_end = $("#lineEndY").val();
+                console.log("draw ...(%s, %s)-(%s, %s)", x_start, y_start, x_end, y_end);
+                var line = {
+                    start: [parseInt(x_start), parseInt(y_start)],
+                    end: [parseInt(x_end), parseInt(y_end)]
+                }
+                console.log(JSON.stringify(line));
+                // $.ajax({
+                //     url: "draw_line",
+                //     type: "POST",
+                //     data: JSON.stringify(line),
+                //     success: function (data, status) {
+                //         console.log("draw line status:", status)
+                //         console.log("draw line data:", data)
+                //     },
+                //     error: function (xhr, info) {
+                //         console.info("draw line err: ", info)
+                //     }
+                // });
+                $.post("draw_line", JSON.stringify(line), function (data, status) {
+                    console.log("draw line status:", status)
+                    console.log("draw line data:", data)
+                });
+            });
+            $("#btnDrawRect").click(function () {
+                var x_start = $("#rectStartX").val();
+                var y_start = $("#rectStartY").val();
+                var x_end = $("#rectEndX").val();
+                var y_end = $("#rectEndY").val();
+                console.log("draw rect (%s, %s)-(%s, %s)", x_start, y_start, x_end, y_end);
+                var rect = {
+                    start: [parseInt(x_start), parseInt(y_start)],
+                    end: [parseInt(x_end), parseInt(y_end)]
+                }
+                console.log(JSON.stringify(rect));
+                $.post("draw_rect", JSON.stringify(rect), function (data, status) {
+                    console.log("draw rect status:", status)
+                    console.log("draw rect data:", data)
                 });
             });
         }
